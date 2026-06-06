@@ -47,7 +47,7 @@ dtm
 
 # Trial-and-error sparse term removal
 # Increase/decrease this value unitl around 25 terms remain
-dtm_sparse <- removeSparseTerms(dtm, 0.55)
+dtm_sparse <- removeSparseTerms(dtm, 0.20)
 
 dtm_sparse
 
@@ -60,3 +60,17 @@ rownames(dtm_matrix) <- corpus_df$doc_id
 # View final tokens
 colnames(dtm_matrix)
 
+write.csv(dtm_matrix, "data/dtm_matrix.csv", row.names = TRUE)
+
+# Save token frquency table
+token_freq <- colSums(dtm_matrix)
+token_freq_df <- data.frame(
+    token = names(token_freq),
+    frequency = as.numeric(token_freq)
+)  %>%
+    arrange(desc(frequency))
+
+write.csv(token_freq_df, "data/token_freq.csv", row.names = FALSE)
+
+# Print number of final tokens
+cat("Number of final tokens:", ncol(dtm_matrix), "\n")
