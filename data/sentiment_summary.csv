@@ -1,0 +1,4 @@
+"genre","mean_sentiment","sd_sentiment","min_sentiment","max_sentiment"
+"Film Review",5.25,0.791833315793166,3.7,5.8
+"News",2.2,0.436844747402705,1.3,2.7
+"Sports",7.88571428571429,0.782471663871545,6.9,9.2

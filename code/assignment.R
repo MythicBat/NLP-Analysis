@@ -170,3 +170,113 @@ write.csv(
   "data/clustering_accuracy.csv",
   row.names = FALSE
 )
+
+install.packages("ggpubr")
+
+# ============================================================
+# QUESTION 5: SENTIMENT ANALYSIS
+# ============================================================
+
+library(syuzhet)
+library(ggplot2)
+
+# Get sentiment score for each document
+sentiment_scores <- get_sentiment(
+  corpus_df$text,
+  method = "syuzhet"
+)
+
+# Create results table
+sentiment_df <- data.frame(
+  doc_id = corpus_df$doc_id,
+  genre = corpus_df$genre,
+  sentiment = sentiment_scores
+)
+
+print(sentiment_df)
+
+# Save results
+write.csv(
+  sentiment_df,
+  "data/sentiment_results.csv",
+  row.names = FALSE
+)
+
+# Genre summary
+genre_sentiment <- aggregate(
+  sentiment ~ genre,
+  data = sentiment_df,
+  FUN = mean
+)
+
+print(genre_sentiment)
+
+write.csv(
+  genre_sentiment,
+  "data/genre_sentiment.csv",
+  row.names = FALSE
+)
+
+# Sentiment Boxplot
+p1 <- ggplot(
+    sentiment_df,
+    aes(
+        x = genre,
+        y = sentiment,
+        fill = genre
+    )
+) +
+    geom_boxplot(alpha = 0.8) +
+    geom_jitter(width = 0.1) +
+    labs(
+        title = "Sentiment Distribution by Genre",
+        x = "Genre",
+        y = "Sentiment Score"
+    ) +
+    theme_minimal() +
+    theme(
+        legend.position = "none",
+        plot.title = element_text(face = "bold")
+    )
+
+ggsave(
+    "figures/sentiment_boxplot.png",
+    p1,
+    width = 8,
+    height = 5
+)
+
+# ============================================================
+# ANOVA TEST
+# ============================================================
+
+anova_result <- aov(
+  sentiment ~ genre,
+  data = sentiment_df
+)
+
+summary(anova_result)
+
+capture.output(
+  summary(anova_result),
+  file = "report/anova_results.txt"
+)
+
+library(dplyr)
+
+sentiment_summary <- sentiment_df %>%
+  group_by(genre) %>%
+  summarise(
+    mean_sentiment = mean(sentiment),
+    sd_sentiment = sd(sentiment),
+    min_sentiment = min(sentiment),
+    max_sentiment = max(sentiment)
+  )
+
+print(sentiment_summary)
+
+write.csv(
+  sentiment_summary,
+  "data/sentiment_summary.csv",
+  row.names = FALSE
+)
