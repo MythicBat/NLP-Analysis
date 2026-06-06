@@ -280,3 +280,179 @@ write.csv(
   "data/sentiment_summary.csv",
   row.names = FALSE
 )
+
+# ============================================================
+# QUESTION 6: DOCUMENT NETWORK USING TF-IDF SIMILARITY
+# ============================================================
+
+library(tm)
+library(proxy)
+library(igraph)
+library(ggraph)
+library(tidygraph)
+library(dplyr)
+library(ggplot2)
+
+# Create a TF-IDF weighted DTM from the cleaned corpus
+dtm_tfidf <- DocumentTermMatrix(
+  text_corpus,
+  control = list(weighting = weightTfIdf)
+)
+
+# Remove very sparse terms, but keep more detail than Q3
+dtm_tfidf_sparse <- removeSparseTerms(dtm_tfidf, 0.80)
+
+tfidf_matrix <- as.matrix(dtm_tfidf_sparse)
+rownames(tfidf_matrix) <- corpus_df$doc_id
+
+cat("TF-IDF network tokens:", ncol(tfidf_matrix), "\n")
+
+# Cosine similarity between documents
+cosine_distance <- proxy::dist(tfidf_matrix, method = "cosine")
+cosine_similarity <- 1 - as.matrix(cosine_distance)
+
+diag(cosine_similarity) <- 0
+
+# Convert similarity matrix to edge list
+doc_edges <- as.data.frame(as.table(cosine_similarity))
+colnames(doc_edges) <- c("from", "to", "similarity")
+
+doc_edges <- doc_edges %>%
+  mutate(
+    from = as.character(from),
+    to = as.character(to),
+    similarity = as.numeric(similarity)
+  ) %>%
+  filter(from < to)
+
+# Keep only strongest similarities
+# Adjust this threshold if graph is too dense/sparse
+similarity_threshold <- quantile(doc_edges$similarity, 0.75)
+
+doc_edges <- doc_edges %>%
+  filter(similarity >= similarity_threshold)
+
+summary(doc_edges$similarity)
+
+# Node table
+doc_nodes <- data.frame(
+  name = corpus_df$doc_id,
+  genre = corpus_df$genre,
+  sentiment = sentiment_df$sentiment
+)
+
+# Create graph
+doc_graph <- graph_from_data_frame(
+  d = doc_edges,
+  vertices = doc_nodes,
+  directed = FALSE
+)
+
+# Community detection
+communities <- cluster_louvain(doc_graph, weights = E(doc_graph)$similarity)
+V(doc_graph)$community <- communities$membership
+
+# Centrality
+V(doc_graph)$degree <- degree(doc_graph)
+V(doc_graph)$strength <- strength(doc_graph, weights = E(doc_graph)$similarity)
+V(doc_graph)$betweenness <- betweenness(doc_graph, weights = 1 / E(doc_graph)$similarity)
+
+doc_centrality <- data.frame(
+  doc_id = V(doc_graph)$name,
+  genre = V(doc_graph)$genre,
+  community = V(doc_graph)$community,
+  degree = V(doc_graph)$degree,
+  strength = round(V(doc_graph)$strength, 3),
+  betweenness = round(V(doc_graph)$betweenness, 3),
+  sentiment = V(doc_graph)$sentiment
+) %>%
+  arrange(desc(strength), desc(degree))
+
+write.csv(
+  doc_centrality,
+  "data/document_centrality.csv",
+  row.names = FALSE
+)
+
+# ============================================================
+# Improved document network plot
+# ============================================================
+
+set.seed(123)
+
+p_doc_network <- ggraph(doc_graph, layout = "kk") +
+  geom_edge_link(
+    aes(width = similarity),
+    colour = "grey65",
+    alpha = 0.45
+  ) +
+  geom_node_point(
+    aes(size = strength, colour = genre),
+    alpha = 0.95
+  ) +
+  geom_node_text(
+    aes(label = name),
+    repel = TRUE,
+    size = 4
+  ) +
+  scale_edge_width(
+    range = c(0.3, 2.5),
+    name = "TF-IDF cosine similarity"
+  ) +
+  scale_size_continuous(
+    range = c(4, 10),
+    name = "Strength centrality"
+  ) +
+  labs(
+    title = "Document Network Based on TF-IDF Similarity",
+    subtitle = "Nodes are documents; edges show strongest cosine similarities between documents",
+    colour = "Genre"
+  ) +
+  theme_graph(base_family = "sans") +
+  theme(
+    plot.title = element_text(face = "bold", size = 18),
+    plot.subtitle = element_text(size = 12),
+    legend.position = "bottom",
+    guides(size = "none")
+  )
+
+ggsave(
+  "figures/document_network_hd.png",
+  p_doc_network,
+  width = 10,
+  height = 7,
+  dpi = 300
+)
+
+# ============================================================
+# Supporting centrality bar chart
+# ============================================================
+
+p_doc_strength <- ggplot(
+  doc_centrality,
+  aes(x = reorder(doc_id, strength), y = strength, fill = genre)
+) +
+  geom_col() +
+  coord_flip() +
+  labs(
+    title = "Document Strength Centrality",
+    subtitle = "Higher strength means stronger similarity to other documents",
+    x = "Document",
+    y = "Strength centrality",
+    fill = "Genre"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(face = "bold", size = 16),
+    plot.subtitle = element_text(size = 11)
+  )
+
+ggsave(
+  "figures/document_strength.png",
+  p_doc_strength,
+  width = 9,
+  height = 7,
+  dpi = 300
+)
+
+print(doc_centrality)
