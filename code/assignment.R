@@ -456,3 +456,165 @@ ggsave(
 )
 
 print(doc_centrality)
+
+# ============================================================
+# QUESTION 7: TOKEN NETWORK USING TF-IDF CO-OCCURRENCE
+# ============================================================
+
+library(igraph)
+library(ggraph)
+library(tidygraph)
+library(dplyr)
+library(ggplot2)
+
+# Use the TF-IDF matrix from Q6
+token_matrix <- tfidf_matrix
+
+# Token-token co-occurrence / similarity matrix
+token_co <- t(token_matrix) %*% token_matrix
+
+diag(token_co) <- 0
+
+# Convert to edge list
+token_edges <- as.data.frame(as.table(token_co))
+colnames(token_edges) <- c("from", "to", "weight")
+
+token_edges <- token_edges %>%
+  mutate(
+    from = as.character(from),
+    to = as.character(to),
+    weight = as.numeric(weight)
+  ) %>%
+  filter(from < to) %>%
+  filter(weight > 0)
+
+# Keep strongest token relationships
+token_threshold <- quantile(token_edges$weight, 0.95)
+
+token_edges <- token_edges %>%
+  filter(weight >= token_threshold)
+
+# Create token graph
+token_graph <- graph_from_data_frame(
+  d = token_edges,
+  directed = FALSE
+)
+
+# Community detection
+token_communities <- cluster_louvain(
+  token_graph,
+  weights = E(token_graph)$weight
+)
+
+V(token_graph)$community <- token_communities$membership
+
+# Centrality
+V(token_graph)$degree <- degree(token_graph)
+V(token_graph)$strength <- strength(
+  token_graph,
+  weights = E(token_graph)$weight
+)
+
+V(token_graph)$betweenness <- betweenness(
+  token_graph,
+  weights = 1 / E(token_graph)$weight
+)
+
+token_centrality <- data.frame(
+  token = V(token_graph)$name,
+  community = V(token_graph)$community,
+  degree = V(token_graph)$degree,
+  strength = round(V(token_graph)$strength, 3),
+  betweenness = round(V(token_graph)$betweenness, 3)
+) %>%
+  arrange(desc(strength), desc(degree))
+
+write.csv(
+  token_centrality,
+  "data/token_centrality.csv",
+  row.names = FALSE
+)
+
+print(head(token_centrality, 20))
+
+# ============================================================
+# TOKEN NETWORK PLOT
+# ============================================================
+
+set.seed(123)
+
+p_token_network <- ggraph(token_graph, layout = "kk") +
+  geom_edge_link(
+    aes(width = weight),
+    colour = "grey70",
+    alpha = 0.45
+  ) +
+  geom_node_point(
+    aes(size = strength, colour = factor(community)),
+    alpha = 0.95
+  ) +
+  geom_node_text(
+    aes(label = name),
+    repel = TRUE,
+    size = 4
+  ) +
+  scale_edge_width(
+    range = c(0.2, 2.5),
+    name = "Co-occurrence strength"
+  ) +
+  scale_size_continuous(
+    range = c(4, 10),
+    name = "Strength centrality"
+  ) +
+  labs(
+    title = "Token Network Based on TF-IDF Co-occurrence",
+    subtitle = "Nodes are tokens; edges show strongest relationships between words",
+    colour = "Community"
+  ) +
+  theme_graph(base_family = "sans") +
+  theme(
+    plot.title = element_text(face = "bold", size = 18),
+    plot.subtitle = element_text(size = 12),
+    legend.position = "bottom"
+  )
+
+ggsave(
+  "figures/token_network.png",
+  p_token_network,
+  width = 10,
+  height = 8,
+  dpi = 300
+)
+
+# ============================================================
+# TOP TOKEN CENTRALITY BAR CHART
+# ============================================================
+
+top_tokens <- token_centrality %>%
+  slice_head(n = 15)
+
+p_top_tokens <- ggplot(
+  top_tokens,
+  aes(x = reorder(token, strength), y = strength)
+) +
+  geom_col() +
+  coord_flip() +
+  labs(
+    title = "Top 15 Tokens by Strength Centrality",
+    subtitle = "Higher strength means stronger connection to other important tokens",
+    x = "Token",
+    y = "Strength centrality"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(face = "bold", size = 16),
+    plot.subtitle = element_text(size = 11)
+  )
+
+ggsave(
+  "figures/top_tokens_centrality.png",
+  p_top_tokens,
+  width = 8,
+  height = 6,
+  dpi = 300
+)
