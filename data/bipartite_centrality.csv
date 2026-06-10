@@ -1,0 +1,41 @@
+"node","type","genre","degree","strength"
+"news_06","Document","News",12,0.301
+"news_05","Document","News",12,0.276
+"news_04","Document","News",12,0.274
+"news_07","Document","News",12,0.274
+"news_02","Document","News",12,0.272
+"news_01","Document","News",12,0.267
+"polici","Token","Token",7,0.267
+"news_03","Document","News",12,0.261
+"energi","Token","Token",7,0.223
+"team","Token","Token",7,0.193
+"public","Token","Token",7,0.187
+"hous","Token","Token",7,0.187
+"charact","Token","Token",6,0.186
+"competit","Token","Token",7,0.184
+"player","Token","Token",7,0.184
+"result","Token","Token",7,0.184
+"sports_01","Document","Sports",6,0.177
+"audienc","Token","Token",6,0.177
+"inflat","Token","Token",7,0.16
+"win","Token","Token",7,0.158
+"econom","Token","Token",7,0.151
+"sports_02","Document","Sports",6,0.149
+"sports_03","Document","Sports",6,0.149
+"sports_07","Document","Sports",7,0.149
+"sports_05","Document","Sports",6,0.148
+"sports_06","Document","Sports",6,0.141
+"match","Token","Token",7,0.141
+"sports_04","Document","Sports",6,0.139
+"govern","Token","Token",8,0.132
+"concern","Token","Token",7,0.125
+"consequ","Token","Token",7,0.125
+"decis","Token","Token",7,0.125
+"issu","Token","Token",7,0.125
+"maker","Token","Token",7,0.125
+"film_06","Document","Film Review",2,0.067
+"film_02","Document","Film Review",2,0.06
+"film_03","Document","Film Review",2,0.06
+"film_04","Document","Film Review",2,0.059
+"film_05","Document","Film Review",2,0.059
+"film_01","Document","Film Review",2,0.058

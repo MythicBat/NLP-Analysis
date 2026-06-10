@@ -618,3 +618,141 @@ ggsave(
   height = 6,
   dpi = 300
 )
+
+# ============================================================
+# QUESTION 8: BIPARTITE NETWORK OF DOCUMENTS AND TOKENS
+# ============================================================
+
+library(igraph)
+library(ggraph)
+library(dplyr)
+library(ggplot2)
+
+# Use TF-IDF matrix from Q6
+bipartite_matrix <- tfidf_matrix
+
+# Keep only top tokens by centrality from Q7 to avoid messy graph
+top_bipartite_tokens <- token_centrality %>%
+  slice_head(n = 20) %>%
+  pull(token)
+
+bipartite_matrix <- bipartite_matrix[, colnames(bipartite_matrix) %in% top_bipartite_tokens]
+
+# Convert matrix to edge list
+bipartite_edges <- as.data.frame(as.table(bipartite_matrix))
+
+colnames(bipartite_edges) <- c("document", "token", "weight")
+
+bipartite_edges <- bipartite_edges %>%
+  mutate(
+    document = as.character(document),
+    token = as.character(token),
+    weight = as.numeric(weight)
+  ) %>%
+  filter(weight > 0)
+
+# Create node table
+document_nodes <- data.frame(
+  name = corpus_df$doc_id,
+  type = "Document",
+  genre = corpus_df$genre
+)
+
+token_nodes <- data.frame(
+  name = top_bipartite_tokens,
+  type = "Token",
+  genre = "Token"
+)
+
+bipartite_nodes <- bind_rows(document_nodes, token_nodes)
+
+# Create graph
+bipartite_graph <- graph_from_data_frame(
+  d = bipartite_edges,
+  vertices = bipartite_nodes,
+  directed = FALSE
+)
+
+# Bipartite type: TRUE for tokens, FALSE for documents
+V(bipartite_graph)$bipartite_type <- V(bipartite_graph)$type == "Token"
+
+# Centrality
+V(bipartite_graph)$degree <- degree(bipartite_graph)
+V(bipartite_graph)$strength <- strength(
+  bipartite_graph,
+  weights = E(bipartite_graph)$weight
+)
+
+bipartite_centrality <- data.frame(
+  node = V(bipartite_graph)$name,
+  type = V(bipartite_graph)$type,
+  genre = V(bipartite_graph)$genre,
+  degree = V(bipartite_graph)$degree,
+  strength = round(V(bipartite_graph)$strength, 3)
+) %>%
+  arrange(desc(strength))
+
+write.csv(
+  bipartite_centrality,
+  "data/bipartite_centrality.csv",
+  row.names = FALSE
+)
+
+print(head(bipartite_centrality, 20))
+
+# ============================================================
+# BIPARTITE NETWORK PLOT
+# ============================================================
+
+set.seed(123)
+
+p_bipartite <- ggraph(
+  bipartite_graph,
+  layout = "stress"
+) +
+  geom_edge_link(
+    aes(width = weight),
+    colour = "grey75",
+    alpha = 0.35
+  ) +
+  geom_node_point(
+    aes(
+      shape = type,
+      colour = genre,
+      size = strength
+    ),
+    alpha = 0.95
+  ) +
+  geom_node_text(
+    aes(label = name),
+    repel = TRUE,
+    size = 3.5
+  ) +
+  scale_edge_width(
+    range = c(0.2, 2.2),
+    name = "TF-IDF weight"
+  ) +
+  scale_size_continuous(
+    range = c(3, 9),
+    name = "Strength"
+  ) +
+  labs(
+    title = "Bipartite Network of Documents and Tokens",
+    subtitle = "Documents are connected to their most important tokens",
+    colour = "Genre",
+    shape = "Node type"
+  ) +
+  theme_graph(base_family = "sans") +
+  theme(
+    plot.title = element_text(face = "bold", size = 18),
+    plot.subtitle = element_text(size = 12),
+    legend.position = "bottom"
+  )
+
+ggsave(
+  "figures/bipartite_network.png",
+  p_bipartite,
+  width = 12,
+  height = 8,
+  dpi = 300
+)
