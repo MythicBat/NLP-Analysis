@@ -19,6 +19,7 @@ referencing. The text was copied into the text column and checked to ensure that
 ## QUESTION 3: TEXT PROCESSING AND DTM
 
 ```{r}
+# 34 tokens
 dtm_sparse <- removeSparseTerms(dtm, 0.20)
 ```
 
@@ -44,12 +45,18 @@ The quantitative clustering result was evaluated using a genre-by-cluster table.
 
 This result suggests that the selected tokens were effective at distinguishing the three genres. The film review documents likely shared vocabulary related to films, characters, performances, stories, and reviews. The sports documents shared vocabulary linked to matches, teams, players, and competition. The news documents shared broader reporting-style vocabulary. Because there was no mixing between the three genres, the clustering result provides strong evidence that the corpus has a clear genre-based structure.
 
-However, this result should still be interpreted carefully. The clustering was based on a reduced DTM with 34 tokens, so it captures broad lexical patterns rather than full semantic meaning. A different preprocessing method, such as TF-IDF weighting, lemmatisation, n-grams, or word embeddings, may produce a more nuanced view of document similarity.
-
 ## QUESTION 5: SENTIMENT ANALYSIS
 
 ```{r q5-sentiment-plot, echo=FALSE, out.width="90%", fig.align="center"}
 knitr::include_graphics("../figures/sentiment_boxplot.png")
+```
+
+```{r appendix-anova, echo=FALSE}
+knitr::kable(
+  as.data.frame(summary(anova_result)[[1]]),
+  caption = "ANOVA Results Comparing Sentiment Scores Across Genres",
+  digits = 4
+)
 ```
 
 The results showed clear differences between the three genres. Sports documents had the highest average sentiment score, with a mean of 7.89 and a range from 6.90 to 9.20. Film reviews had a moderate average sentiment score of 5.25, with scores ranging from 3.70 to 5.80. News documents had the lowest average sentiment score, with a mean of 2.20 and a range from 1.30 to 2.70.
@@ -93,8 +100,6 @@ doc_centrality %>%
   )
 ```
 
-Overall, the document network provides a useful view of relationships in the corpus. While hierarchical clustering shows how documents can be grouped, the network also shows which documents are most strongly connected and which documents act as central examples within their genre. This makes the network analysis a useful complement to clustering.
-
 ## QUESTION 7: TOKEN NETWORK ANALYSIS
 
 ```{r q7-token-network, echo=FALSE, out.width="100%", fig.align="center"}
@@ -119,13 +124,7 @@ A token network was constructed to examine relationships between important words
 
 The resulting network revealed three major communities. Community 1 contained terms associated with film reviews, including words such as *character*, *audience*, *movie*, *director*, *scene*, and *dialogue*. Community 2 contained sports-related vocabulary, including *team*, *player*, *competition*, *result*, *match*, and *win*. Community 3 contained news and public affairs terminology, including *policy*, *energy*, *inflation*, *economy*, *government*, *public*, and *housing*.
 
-Community detection therefore identified meaningful thematic groupings that correspond closely to the three genres represented in the corpus. This indicates that the corpus contains distinctive vocabulary patterns that can be identified automatically using network analysis.
-
 Several highly central tokens were identified using strength centrality. The most important tokens were *policy* (0.194), *energy* (0.161), *team* (0.113), *character* (0.112), and *audience* (0.106). These words occupy central positions within their respective communities and act as important connectors between related terms. The high centrality values suggest that these words are representative of the major themes present within the corpus.
-
-The accompanying centrality chart further highlights the most influential tokens. News-related terms such as *policy*, *energy*, and *inflation* achieved the highest centrality values, indicating that economic and public policy topics formed a dominant theme within the news documents. Sports-related terms such as *team*, *player*, and *competition* also showed strong connectivity, while film-related terms such as *character* and *audience* formed the core of the film review community.
-
-Overall, the token network provides a useful thematic overview of the corpus and complements the document network analysis. While the document network identifies relationships between documents, the token network reveals the underlying vocabulary structure and highlights the most important concepts within the collection.
 
 ## QUESTION 8: BIPARTITE NETWORK ANALYSIS
 
@@ -161,3 +160,80 @@ Network analysis provided a different perspective on the same data. While cluste
 Several improvements were made beyond the basic NLP workflow presented in class. TF-IDF weighting was used to emphasise informative words while reducing the influence of common terms. Sparse terms were removed to reduce noise and improve interpretability. Cosine similarity was used to measure document similarity, providing a more meaningful comparison of document content. Community detection algorithms were applied to both document and token networks to identify hidden structures within the data. Centrality measures were also calculated to identify influential documents and keywords.
 
 Overall, the analysis successfully demonstrated how clustering and network methods can be used together to explore textual data. The combination of these approaches provided a comprehensive understanding of the corpus and highlighted the major themes present within each genre.
+
+## Appendix: 
+
+### Q3: Text Processing
+
+```{r}
+# Create corpus
+text_corpus <- VCorpus(VectorSource(corpus_df$text))
+
+# Convert to lowercase
+text_corpus <- tm_map(text_corpus, content_transformer(tolower))
+
+# Remove punctuation
+text_corpus <- tm_map(text_corpus, removePunctuation)
+
+# Remove numbers
+text_corpus <- tm_map(text_corpus, removeNumbers)
+
+# Remove stopwords
+text_corpus <- tm_map(text_corpus, removeWords, stopwords("english"))
+
+# Apply stemming
+text_corpus <- tm_map(text_corpus, stemDocument)
+
+# Create DTM
+dtm <- DocumentTermMatrix(text_corpus)
+
+# Convert dtm to matrix
+dtm_matrix <- as.matrix(dtm_sparse)
+
+# Add document IDs as row names
+rownames(dtm_matrix) <- corpus_df$doc_id
+```
+
+### Q4: Hierarchical Clustering
+
+```{r}
+# Cosine distance
+cos_dist <- proxy::dist(dtm_matrix, method = "cosine")
+
+# Hierarchical clustering
+hc <- hclust(cos_dist, method = "ward.D2")
+
+# Cluster assignment
+cluster_assignments <- cutree(hc, k = 3)
+```
+
+### Q5: Sentiment Analysis
+
+```{r}
+# Get sentiment score for each document
+sentiment_scores <- get_sentiment(
+  corpus_df$text,
+  method = "syuzhet"
+)
+
+# Create results table
+sentiment_df <- data.frame(
+  doc_id = corpus_df$doc_id,
+  genre = corpus_df$genre,
+  sentiment = sentiment_scores
+)
+
+
+# Genre summary
+genre_sentiment <- aggregate(
+  sentiment ~ genre,
+  data = sentiment_df,
+  FUN = mean
+)
+
+# Anova Result
+anova_result <- aov(
+  sentiment ~ genre,
+  data = sentiment_df
+)
+```
