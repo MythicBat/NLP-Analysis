@@ -1,17 +1,22 @@
 ---
-title: "FIT3152 Assignment 3"
-author: "Alin Merchant"
-output: html_document
+title: "FIT3152 Assignment 3 Report"
+author: "Alin Merchant (34674896)"
+date: "`r format(Sys.Date(), '%d %B %Y')`"
+output:
+  html_document:
+    css: style.css
+    toc: false
+    df_print: paged
 ---
 
-# QUESTION 2: CORPUS COLLECTION
+## QUESTION 2: CORPUS COLLECTION
 
 The corpus was created as a CSV file because this format is easy to read in R and allows both text and metadata to be stored together.
 The CSV contains 4 main columns **doc_id**, **genre**, **title**, **source**, and **text**. The doc_id column provides a short unique identifier for each document,
 which is useful for labelling clusters and network nodes. The genre column stores the known class labels for each document, while the source column records the URL used for
 referencing. The text was copied into the text column and checked to ensure that each document was machine-readable.
 
-# QUESTION 3: TEXT PROCESSING AND DTM
+## QUESTION 3: TEXT PROCESSING AND DTM
 
 ```{r}
 dtm_sparse <- removeSparseTerms(dtm, 0.20)
@@ -23,7 +28,7 @@ After cleaning, a Document-Term Matrix was created. This matrix represents each 
 
 The final DTM was exported as a CSV file and included in the appendix. A token frequency table was also created to identify the most common terms in the corpus.
 
-# QUESTION 4: HIERARCHICAL CLUSTERING
+## QUESTION 4: HIERARCHICAL CLUSTERING
 
 ```{r q4-dendrogram, echo=FALSE, out.width="100%", fig.align="center"}
 knitr::include_graphics("../figures/dendrogram_hd.png")
@@ -41,7 +46,7 @@ This result suggests that the selected tokens were effective at distinguishing t
 
 However, this result should still be interpreted carefully. The clustering was based on a reduced DTM with 34 tokens, so it captures broad lexical patterns rather than full semantic meaning. A different preprocessing method, such as TF-IDF weighting, lemmatisation, n-grams, or word embeddings, may produce a more nuanced view of document similarity.
 
-# QUESTION 5: SENTIMENT ANALYSIS
+## QUESTION 5: SENTIMENT ANALYSIS
 
 ```{r q5-sentiment-plot, echo=FALSE, out.width="90%", fig.align="center"}
 knitr::include_graphics("../figures/sentiment_boxplot.png")
@@ -57,7 +62,7 @@ The boxplot supports this result visually. Sports documents form the highest sen
 
 However, the dictionary-based method has limitations. It counts words based on predefined sentiment values and may not fully understand context, sarcasm, negation, or domain-specific meaning. For example, a word that is positive in one context may be neutral or negative in another. Despite this limitation, the sentiment analysis provides useful quantitative evidence that the genres differ in emotional tone.
 
-# QUESTION 6: DOCUMENT NETWORK ANALYSIS
+## QUESTION 6: DOCUMENT NETWORK ANALYSIS
 
 A single-mode document network was created to examine relationships between the documents in the corpus. In this network, each node represents one document, and each edge represents a similarity relationship between two documents. Instead of using raw word counts only, I used a TF-IDF weighted Document-Term Matrix. TF-IDF was used because it gives more importance to distinctive terms and reduces the influence of common terms that appear across many documents.
 
@@ -90,7 +95,7 @@ doc_centrality %>%
 
 Overall, the document network provides a useful view of relationships in the corpus. While hierarchical clustering shows how documents can be grouped, the network also shows which documents are most strongly connected and which documents act as central examples within their genre. This makes the network analysis a useful complement to clustering.
 
-# QUESTION 7: TOKEN NETWORK ANALYSIS
+## QUESTION 7: TOKEN NETWORK ANALYSIS
 
 ```{r q7-token-network, echo=FALSE, out.width="100%", fig.align="center"}
 knitr::include_graphics("../figures/token_network.png")
@@ -122,7 +127,7 @@ The accompanying centrality chart further highlights the most influential tokens
 
 Overall, the token network provides a useful thematic overview of the corpus and complements the document network analysis. While the document network identifies relationships between documents, the token network reveals the underlying vocabulary structure and highlights the most important concepts within the collection.
 
-# QUESTION 8: BIPARTITE NETWORK ANALYSIS
+## QUESTION 8: BIPARTITE NETWORK ANALYSIS
 
 ```{r q8-bipartite, echo=FALSE, out.width="100%", fig.align="center"}
 knitr::include_graphics("../figures/bipartite_network.png")
@@ -144,3 +149,15 @@ The resulting network reveals a clear separation between the three document genr
 Several highly central nodes were identified using strength centrality. The most important document nodes were *news_06*, *news_05*, *news_04*, and *news_07*, indicating that these documents were strongly connected to multiple important keywords. Among the token nodes, *policy*, *energy*, *team*, *public*, and *housing* achieved the highest centrality values. These keywords therefore represent the most influential concepts within the corpus.
 
 The bipartite network provides a direct link between documents and vocabulary, making it possible to identify which keywords drive the structure of each genre. While the document network focuses on relationships between documents and the token network focuses on relationships between words, the bipartite network combines both perspectives and provides a more comprehensive view of the corpus structure.
+
+## QUESTION 9: SUMMARY OF THE REPORT
+
+This assignment applied several Natural Language Processing (NLP) techniques to analyse a corpus containing news articles, sports articles, and film reviews. The analysis included document clustering, sentiment analysis, document networks, token networks, and bipartite networks.
+
+The clustering analysis demonstrated that the documents could be grouped accurately according to their underlying genre. Hierarchical clustering produced three clearly separated clusters corresponding to sports, news, and film review documents. The clustering evaluation achieved 100% accuracy when compared against the known document categories. This result suggests that the vocabulary used within each genre is highly distinctive and that document similarity can successfully identify thematic groupings.
+
+Network analysis provided a different perspective on the same data. While clustering focuses on grouping documents into categories, network analysis focuses on the relationships between documents and words. The document network revealed how strongly documents were connected to one another through shared vocabulary, while the token network revealed thematic communities of words. The bipartite network further connected these two perspectives by directly linking documents with their most important keywords. Together, the network approaches provided a richer understanding of the corpus structure than clustering alone.
+
+Several improvements were made beyond the basic NLP workflow presented in class. TF-IDF weighting was used to emphasise informative words while reducing the influence of common terms. Sparse terms were removed to reduce noise and improve interpretability. Cosine similarity was used to measure document similarity, providing a more meaningful comparison of document content. Community detection algorithms were applied to both document and token networks to identify hidden structures within the data. Centrality measures were also calculated to identify influential documents and keywords.
+
+Overall, the analysis successfully demonstrated how clustering and network methods can be used together to explore textual data. The combination of these approaches provided a comprehensive understanding of the corpus and highlighted the major themes present within each genre.
