@@ -79,7 +79,6 @@ cat("Number of final tokens:", ncol(dtm_matrix), "\n")
 # QUESTION 4: Hierarchical Clustering of Documents
 # ============================================================
 
-install.packages("dendextend")
 library(dendextend)
 
 # Cosine distance
